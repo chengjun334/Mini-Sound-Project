@@ -1,0 +1,154 @@
+var mySound;
+var looper;
+
+function preload() {
+  soundFormats("mp3");
+  mySound = loadSound("short snort.mp3");
+}
+
+function mousePressed() {
+  looper.start();
+}
+
+function mouseReleased() {
+  looper.stop();
+  nose.reset();
+}
+
+function setup() {
+  let env = createCanvas(600, 600);
+  ellipseMode(CENTER);
+    looper = new p5.SoundLoop(function(timeFromNow) {
+    mySound.play(timeFromNow);
+  }, 1.25);
+}
+
+class Pos {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+  }
+  signdiff(pos) {
+    let a;
+    let b;
+    if (this.x > pos.x) {
+      a = 1
+    } else {
+      a = -1
+    }
+    if (this.y > pos.y) {
+      b = 1
+    } else {
+      b = -1
+    }
+  // b = this.y > pos.y ? 1 : -1
+    return [a, b]
+  }
+  diff(pos) {
+    return [this.x-pos.x, this.y-pos.y]
+  }
+}
+
+class Size extends Pos {}
+
+class Facial {
+  constructor(pos, size) {
+    this.pos = pos
+    this.size = size
+  }
+  mousesDiff() {
+    return this.pos.signdiff(new Pos(mouseX, mouseY))
+  }
+  mouseDiff() {
+    return this.pos.diff(new Pos(mouseX, mouseY))
+  }
+}
+
+function calcC(a,b){
+  return Math.sqrt(Math.pow(a,2)+Math.pow(b,2))
+}
+
+class Eye extends Facial {
+  limit(){
+    return 7; // max distance to center
+  }
+  movefactor() {
+    let [a, b] = this.mouseDiff();
+    let c = calcC(a,b);
+    let n = this.limit()/c
+    return [n*a, n*b]
+  }
+  draw() {
+    fill(70)
+    let [a, b] = this.movefactor()
+    ellipse(this.pos.x - a,
+      this.pos.y - b,
+      this.size.x,
+      this.size.y);
+  }
+}
+
+class Nose extends Facial {
+  constructor(pos, size) {
+    super(pos,size)
+    this.offset = new Pos(0, 0)
+  }
+  sqzfactor() {
+    return 0.5 * (abs(this.offset.x) + abs(this.offset.y))
+  }
+
+  reset() {
+    this.offset.x = 0
+    this.offset.y = 0
+  }
+  limit() {
+    return 20 // const value
+  }
+  draw() {
+    fill(227, 155, 172);
+    ellipse(this.pos.x + this.offset.x, this.pos.y + this.offset.y,
+      this.size.x - this.sqzfactor(),
+      this.size.y - this.sqzfactor());
+    this.hole()
+  }
+  hole(x, y) {
+    fill(70, 34, 33);
+    let size = 50 - this.sqzfactor();
+    let a = this.pos.x + this.offset.x;
+    let b = this.pos.y + this.offset.y;
+    circle(a - 50,
+      b, size);
+    circle(a + 50,
+      b, size);
+  }
+  squeeze() {
+    let [a, b] = this.mousesDiff()
+    if (abs(this.offset.x + a) < this.limit()) {
+      this.offset.x += a
+    }
+    if (abs(this.offset.y + b) < this.limit()) {
+      this.offset.y += b
+    }
+  }
+}
+
+const nose = new Nose(new Pos(300, 400), new Size(300, 200))
+const eyesize = new Size(50, 80)
+const leye = new Eye(new Pos(150, 200), eyesize)
+const reye = new Eye(new Pos(450, 200), eyesize)
+
+function draw() {
+  background(249, 207, 196);
+  noStroke();
+
+  //nose
+  nose.draw();
+
+  //eyes
+  leye.draw()
+  reye.draw()
+
+  if (mouseIsPressed) {
+    nose.squeeze();
+  }
+}
